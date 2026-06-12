@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的冰箱 🧊</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#7BB3A0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="我的冰箱" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream:    '#FDFBF7',
+            cardwhite:'#FFFFFF',
+            accent:   '#7BB3A0',
+            warn:     '#E87B5A',
+            muted:    '#A8A29E',
+          },
+          fontFamily: {
+            round: ['"Varela Round"', 'sans-serif'],
+          },
+          borderRadius: {
+            '2xl': '1rem',
+            '3xl': '1.5rem',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Varela+Round&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── 全局基础 ── */
+    body { background-color: #FDFBF7; font-family: 'Varela Round', sans-serif; }
+
+    /* ── 视图显隐 ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Tab 激活 ── */
+    .tab-btn.active { background-color: #7BB3A0; color: #fff; }
+
+    /* ── 手绘感卡片：轻微阴影 + 悬停上浮 ── */
+    .ingredient-card {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .ingredient-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04);
+    }
+
+    /* ── 滚动区域 ── */
+    .scroll-area { height: calc(100vh - 130px); overflow-y: auto; }
+    .scroll-area::-webkit-scrollbar { width: 4px; }
+    .scroll-area::-webkit-scrollbar-thumb { background: #D6D0C8; border-radius: 4px; }
+
+    /* ── 入库模态框 ── */
+    #modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 50;
+      align-items: center;
+      justify-content: center;
+    }
+    #modal-overlay.open { display: flex; }
+
+    /* ── 到期天数 badge ── */
+    .badge-urgent { background: #FEE2E2; color: #DC2626; }
+    .badge-warn   { background: #FEF3C7; color: #D97706; }
+    .badge-ok     { background: #DCFCE7; color: #16A34A; }
+  </style>
+</head>
+
+<body class="min-h-screen">
+
+  <!-- ═══ 顶部标题栏 ═══ -->
+  <header class="sticky top-0 z-40 bg-cream border-b border-stone-100 shadow-sm px-4 pt-4 pb-0">
+    <h1 class="text-2xl font-round text-stone-700 text-center mb-3">🧊 我的冰箱</h1>
+
+    <!-- Tab 导航 -->
+    <nav class="flex gap-2 justify-center pb-0">
+      <button
+        class="tab-btn active flex-1 max-w-[110px] py-2 rounded-t-2xl text-sm font-round text-stone-500 bg-stone-100 transition-all"
+        data-target="view-recipe"
+      >🍽 菜谱</button>
+      <button
+        class="tab-btn flex-1 max-w-[110px] py-2 rounded-t-2xl text-sm font-round text-stone-500 bg-stone-100 transition-all"
+        data-target="view-fridge"
+      >🧊 冰箱</button>
+      <button
+        class="tab-btn flex-1 max-w-[110px] py-2 rounded-t-2xl text-sm font-round text-stone-500 bg-stone-100 transition-all"
+        data-target="view-add"
+      >＋ 添加</button>
+    </nav>
+  </header>
+
+  <!-- ═══ 内容区 ═══ -->
+  <main class="max-w-2xl mx-auto px-3">
+
+    <!-- ── Tab 1: 菜谱推荐 ── -->
+    <section id="view-recipe" class="view active scroll-area pt-4">
+
+      <!-- 搜索框 -->
+      <div class="relative mb-4">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-lg">🔍</span>
+        <input
+          id="recipe-search"
+          type="text"
+          placeholder="想吃什么？比如红烧肉…"
+          class="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-stone-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+        />
+      </div>
+
+      <!-- 菜谱列表 -->
+      <div id="recipe-list" class="flex flex-col gap-3 pb-6"></div>
+    </section>
+
+    <!-- ── Tab 2: 我的冰箱 ── -->
+    <section id="view-fridge" class="view scroll-area pt-4">
+
+      <!-- 控制栏：分类筛选 + 排序 -->
+      <div class="flex flex-wrap gap-1.5 mb-1 items-center">
+        <button class="fridge-cat-btn active text-xs px-3 py-1 rounded-full bg-accent text-white" data-cat="all">全部</button>
+        <button class="fridge-cat-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-cat="肉和海鲜">🦐 肉类</button>
+        <button class="fridge-cat-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-cat="豆奶类">🥛 豆奶</button>
+        <button class="fridge-cat-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-cat="蔬菜">🥦 蔬菜</button>
+        <button class="fridge-cat-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-cat="水果">🍒 水果</button>
+        <button class="fridge-cat-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-cat="酱料饮品">🧴 酱料</button>
+        <button class="fridge-cat-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-cat="主食">🥟 主食</button>
+        <button
+          id="sort-expiry-btn"
+          class="ml-auto text-xs px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-500"
+          data-asc="true"
+        >⬆ 到期升序</button>
+      </div>
+      <!-- 到期筛选（第二行） -->
+      <div class="flex flex-wrap gap-1.5 mb-1 items-center">
+        <span class="text-xs text-muted">到期：</span>
+        <button class="fridge-filter-btn active text-xs px-3 py-1 rounded-full bg-stone-200 text-stone-600" data-days="all">全部</button>
+        <button class="fridge-filter-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-days="0">今天</button>
+        <button class="fridge-filter-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-days="3">3 天</button>
+        <button class="fridge-filter-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-days="7">7 天</button>
+        <button class="fridge-filter-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-days="custom">自定义</button>
+        <button id="export-poster-btn"
+          class="ml-auto text-xs px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-500 hover:border-accent hover:text-accent transition-colors">
+          🖼 分享海报
+        </button>
+      </div>
+      <!-- 自定义天数输入（默认隐藏） -->
+      <div id="custom-days-row" class="hidden flex items-center gap-2 mb-3">
+        <span class="text-xs text-muted">显示</span>
+        <input id="custom-days-input" type="number" min="1" max="365" value="14"
+          class="w-16 px-2 py-1 rounded-xl border border-stone-200 text-xs text-center focus:outline-none focus:ring-2 focus:ring-accent/40" />
+        <span class="text-xs text-muted">天内到期的</span>
+        <button id="custom-days-apply"
+          class="text-xs px-3 py-1 rounded-full bg-accent text-white hover:bg-accent/80 transition-colors">确定</button>
+      </div>
+
+      <!-- 分类 + 卡片 -->
+      <div id="fridge-grid" class="pb-6"></div>
+    </section>
+
+    <!-- ── Tab 3: 添加食材 / 仓库 ── -->
+    <section id="view-add" class="view scroll-area pt-4">
+
+      <!-- 快速录入区 -->
+      <div class="bg-white rounded-2xl shadow-sm border border-stone-100 p-4 mb-5">
+        <p class="text-sm font-round text-stone-600 mb-2">快速录入</p>
+        <div class="flex gap-2">
+          <input
+            id="quick-input"
+            type="text"
+            placeholder="例：牛肉 500g; 鸡蛋 10 个"
+            class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+          />
+          <button id="voice-btn" title="语音输入"
+            class="px-3 py-2 rounded-xl bg-stone-100 text-stone-500 hover:bg-accent/20 transition-colors">🎤</button>
+          <button id="quick-add-btn"
+            class="px-4 py-2 rounded-xl bg-accent text-white text-sm font-round hover:bg-accent/80 transition-colors">录入</button>
+        </div>
+        <p id="quick-hint" class="mt-2 text-xs hidden"></p>
+      </div>
+
+      <!-- 食材仓库标题 -->
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-base font-round text-stone-700">🏷 我的食材库</h2>
+        <button id="add-new-ingredient-btn"
+          class="text-xs px-3 py-1.5 rounded-xl bg-accent/10 text-accent hover:bg-accent/20 transition-colors">
+          ＋ 新增食材
+        </button>
+      </div>
+
+      <!-- 分类筛选按钮 -->
+      <div class="flex flex-wrap gap-1.5 mb-3">
+        <button class="lib-cat-btn active text-xs px-3 py-1 rounded-full bg-accent text-white" data-cat="all">全部</button>
+        <button class="lib-cat-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-cat="肉和海鲜">🦐 肉类</button>
+        <button class="lib-cat-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-cat="豆奶类">🥛 豆奶</button>
+        <button class="lib-cat-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-cat="蔬菜">🥦 蔬菜</button>
+        <button class="lib-cat-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-cat="水果">🍒 水果</button>
+        <button class="lib-cat-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-cat="酱料饮品">🧴 酱料</button>
+        <button class="lib-cat-btn text-xs px-3 py-1 rounded-full bg-stone-100 text-stone-500" data-cat="主食">🥟 主食</button>
+      </div>
+
+      <!-- 仓库按分类分组渲染，无分类筛选 tab -->
+      <div id="library-grid" class="pb-6"></div>
+    </section>
+
+  </main>
+
+  <!-- ═══ 模态框：快速入库表单 ═══ -->
+  <div id="modal-overlay">
+    <div class="bg-white rounded-3xl shadow-xl w-[92vw] max-w-sm p-5 relative">
+      <button id="modal-close" class="absolute top-4 right-4 text-stone-400 text-lg hover:text-stone-700 leading-none">✕</button>
+
+      <!-- 头部：图片 + 名称 -->
+      <div class="flex items-center gap-3 mb-4">
+        <img id="modal-img" src="" alt="" class="w-14 h-14 rounded-2xl object-cover bg-stone-50 flex-shrink-0" />
+        <div>
+          <p class="text-xs text-muted">存入冰箱</p>
+          <h3 id="modal-title" class="text-lg font-round text-stone-700"></h3>
+        </div>
+      </div>
+
+      <form id="fridge-form" class="flex flex-col gap-3">
+        <input type="hidden" id="form-library-id" />
+
+        <!-- 数量 + 单位 -->
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label class="text-xs text-muted block mb-1">数量</label>
+            <input id="form-amount" type="number" min="0" step="0.1" placeholder="500"
+              class="w-full px-3 py-2 rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40" />
+          </div>
+          <div class="w-28">
+            <label class="text-xs text-muted block mb-1">单位</label>
+            <select id="form-unit"
+              class="w-full px-3 py-2 rounded-xl border border-stone-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/40">
+              <option value="g">g（克）</option>
+              <option value="个">个</option>
+              <option value="袋">袋</option>
+              <option value="盒">盒</option>
+              <option value="瓶">瓶</option>
+              <option value="只">只</option>
+              <option value="根">根</option>
+              <option value="棵">棵</option>
+              <option value="块">块</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 采购日期 -->
+        <div>
+          <label class="text-xs text-muted block mb-1">采购日期</label>
+          <input id="form-purchase" type="date"
+            class="w-full px-3 py-2 rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40" />
+        </div>
+
+        <!-- 到期日期 + 保质期（二选一互算） -->
+        <div class="bg-stone-50 rounded-2xl p-3 flex flex-col gap-2">
+          <p class="text-xs text-muted">到期日期 / 保质期（填一个即可）</p>
+          <div class="flex gap-2 items-center">
+            <input id="form-expiry" type="date"
+              class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/40" />
+            <span class="text-xs text-muted shrink-0">或</span>
+            <div class="flex items-center gap-1">
+              <input id="form-shelf-life" type="number" min="1" max="3650" placeholder="天数"
+                class="w-16 px-2 py-2 rounded-xl border border-stone-200 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-accent/40" />
+              <span class="text-xs text-muted shrink-0">天</span>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit"
+          class="mt-1 w-full py-3 rounded-2xl bg-accent text-white font-round text-sm hover:bg-accent/80 transition-colors">
+          ✅ 存入冰箱
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ 模态框：注册新食材到仓库 ═══ -->
+  <div id="modal-new-overlay" class="fixed inset-0 z-50 bg-black/35 items-center justify-center" style="display:none">
+    <div class="bg-white rounded-3xl shadow-xl w-[92vw] max-w-sm p-5 relative">
+      <button id="modal-new-close" class="absolute top-4 right-4 text-stone-400 text-lg hover:text-stone-700 leading-none">✕</button>
+      <h3 class="text-base font-round text-stone-700 mb-1">发现新食材 🌿</h3>
+      <p class="text-xs text-muted mb-4">先注册到食材库，再存入冰箱</p>
+
+      <form id="new-ingredient-form" class="flex flex-col gap-3">
+        <!-- 名称（只读，由解析结果填入） -->
+        <div>
+          <label class="text-xs text-muted block mb-1">食材名称</label>
+          <input id="new-name" type="text" placeholder="例：番茄" required
+            class="w-full px-3 py-2 rounded-xl border border-stone-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40" />
+        </div>
+
+        <!-- 分类 -->
+        <div>
+          <label class="text-xs text-muted block mb-1">分类</label>
+          <select id="new-category"
+            class="w-full px-3 py-2 rounded-xl border border-stone-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/40">
+            <option value="肉和海鲜">🦐 肉和海鲜</option>
+            <option value="豆奶类">🥛 豆奶类</option>
+            <option value="蔬菜" selected>🥦 蔬菜</option>
+            <option value="水果">🍒 水果</option>
+            <option value="酱料饮品">🧴 酱料饮品</option>
+          </select>
+        </div>
+
+        <!-- 图片选择（从 ASSETS_MAP 中选，含自动匹配预览） -->
+        <div>
+          <label class="text-xs text-muted block mb-1">图片</label>
+          <div class="flex gap-2 items-center mb-2">
+            <img id="new-img-preview" src="" alt=""
+              class="w-12 h-12 rounded-xl object-cover bg-stone-100 flex-shrink-0" />
+            <select id="new-img-select"
+              class="flex-1 px-3 py-2 rounded-xl border border-stone-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/40">
+              <option value="">— 使用默认图标 —</option>
+            </select>
+          </div>
+          <!-- 拍照 / 本地上传（选择后覆盖下拉图片） -->
+          <label class="flex items-center gap-2 cursor-pointer w-fit text-xs text-accent hover:text-accent/70 transition-colors">
+            <span class="px-3 py-1.5 rounded-xl bg-accent/10 hover:bg-accent/20 transition-colors">📷 拍照 / 上传图片</span>
+            <input id="new-img-upload" type="file" accept="image/*" capture="environment" class="hidden" />
+          </label>
+        </div>
+
+        <button type="submit"
+          class="mt-1 w-full py-3 rounded-2xl bg-accent text-white font-round text-sm hover:bg-accent/80 transition-colors">
+          💾 注册并继续入库 →
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ Scripts ═══ -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="data.js"></script>
+  <script src="store.js"></script>
+  <script src="app.js"></script>
+
+  <!-- ═══ 海报预览模态框 ═══ -->
+  <div id="poster-overlay" class="fixed inset-0 z-50 bg-black/60 items-center justify-center" style="display:none">
+    <div class="bg-white rounded-3xl shadow-xl w-[92vw] max-w-sm p-4 relative flex flex-col items-center gap-3">
+      <button id="poster-close" class="absolute top-4 right-4 text-stone-400 text-lg hover:text-stone-700 leading-none">✕</button>
+      <p class="text-sm font-round text-stone-600 self-start">长按图片保存 / 分享 📤</p>
+      <img id="poster-img" src="" alt="冰箱海报"
+        class="w-full rounded-2xl border border-stone-100 shadow-sm" />
+      <button id="poster-download"
+        class="w-full py-2.5 rounded-2xl bg-accent text-white text-sm font-round hover:bg-accent/80 transition-colors">
+        ⬇ 下载图片
+      </button>
+    </div>
+  </div>
+
+  <!-- 海报画布（隐藏，用于 html2canvas 渲染） -->
+  <div id="poster-canvas-root" style="position:fixed;left:-9999px;top:0;width:375px;"></div>
+
+  <!-- PWA Service Worker 注册 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js');
+    }
+  </script>
+
+  <!-- v1.2.0 | 最后更新：2026-06-12 -->
+</body>
+</html>
