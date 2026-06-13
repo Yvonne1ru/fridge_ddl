@@ -12,7 +12,7 @@ const INGREDIENT_CATALOG = [
   { name: '鸡腿',   file: 'chicken_leg.png',               category: '肉和海鲜' },
   { name: '虾',     file: 'shrimp.png',                    category: '肉和海鲜' },
   { name: '三文鱼', file: 'salmon.png',                    category: '肉和海鲜' },
-  { name: '牛里脊', file: 'beef.png',           category: '肉和海鲜' },
+  { name: '牛肉', file: 'beef.png',           category: '肉和海鲜' },
   { name: '肥牛卷', file: 'beef_rolls.png',                 category: '肉和海鲜' },
   { name: '鱼丸',   file: 'fish_ball.png',                 category: '肉和海鲜' },
   { name: '牛肉丸', file: 'beef_ball.png',                 category: '肉和海鲜' },
@@ -27,9 +27,9 @@ const INGREDIENT_CATALOG = [
   { name: '冻豆腐',       file: 'frozen_tofu.png',         category: '豆奶类'   },
   { name: '流心咸鸭蛋',   file: 'salted_duck_egg.png',     category: '豆奶类'   },
   // 蔬菜
-  { name: '紫红洋葱', file: 'onion.png',               category: '蔬菜'     },
+  { name: '洋葱', file: 'onion.png',               category: '蔬菜'     },
   { name: '娃娃菜',   file: 'baby_cabbage.png',            category: '蔬菜'     },
-  { name: '去皮土豆', file: 'potato.png',           category: '蔬菜'     },
+  { name: '土豆', file: 'potato.png',           category: '蔬菜'     },
   { name: '秋葵',     file: 'okra.png',                    category: '蔬菜'     },
   { name: '贝贝南瓜', file: 'pumpkin.png',            category: '蔬菜'     },
   { name: '紫薯',     file: 'purple_sweet_potato.png',     category: '蔬菜'     },
@@ -163,7 +163,7 @@ const RECIPES = [
     description: '松露香气馥郁，牛肉嫩滑，娃娃菜清甜，高级餐厅级美味',
     image: 'assets/truffle_beef_braised_cabbage.png',
     ingredients: [
-      { name: '牛里脊', amount: '200g' },
+      { name: '牛肉', amount: '200g' },
       { name: '娃娃菜', amount: '2 棵' },
       { name: '牛奶', amount: '100ml' }
     ]
@@ -293,9 +293,9 @@ const RECIPES = [
     description: '酱香浓郁，牛肉酥烂入味，汤汁拌饭绝佳，暖胃又满足',
     image: 'assets/red_braised_beef.png',
     ingredients: [
-      { name: '牛里脊', amount: '500g' },
-      { name: '紫红洋葱', amount: '1 个' },
-      { name: '去皮土豆', amount: '2 个' }
+      { name: '牛肉', amount: '500g' },
+      { name: '洋葱', amount: '1 个' },
+      { name: '土豆', amount: '2 个' }
     ]
   },
   {
@@ -371,8 +371,8 @@ const RECIPES = [
     image: 'assets/red-braised_pork_ribs.png',
     ingredients: [
       { name: '猪肉', amount: '500g' },
-      { name: '去皮土豆', amount: '2 个' },
-      { name: '紫红洋葱', amount: '半个' }
+      { name: '土豆', amount: '2 个' },
+      { name: '洋葱', amount: '半个' }
     ]
   },
     {
@@ -384,7 +384,7 @@ const RECIPES = [
     image: 'assets/stir_fried_sea_cucumber_with_onion.png',
     ingredients: [
       { name: '海参', amount: '200g' },
-      { name: '紫红洋葱', amount: '1 个' },
+      { name: '洋葱', amount: '1 个' },
       { name: '蚝油', amount: '1 勺' }
     ]
   },
@@ -424,7 +424,7 @@ const RECIPES = [
     ingredients: [
       { name: '年糕', amount: '300g' },
       { name: '韩式辣酱', amount: '2 勺' },
-      { name: '紫红洋葱', amount: '半个' }
+      { name: '洋葱', amount: '半个' }
     ]
   },
 ];
