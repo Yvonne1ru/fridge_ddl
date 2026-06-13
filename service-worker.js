@@ -1,5 +1,5 @@
 // ── 版本号：每次更新 assets 后改这里，用户下次联网自动刷新 ──
-const CACHE_NAME = 'fridge-v1';
+const CACHE_NAME = 'fridge-v2';
 
 // 需要缓存的静态文件（页面壳 + 所有脚本 + 所有 assets 图片）
 const STATIC_FILES = [
