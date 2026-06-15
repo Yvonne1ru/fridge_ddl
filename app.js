@@ -489,21 +489,51 @@ const UNITS = ['克', 'g', 'G', '千克', 'kg', '斤', '两',
                '只', '根', '棵', '块', '条', '片',
                '把', '束', '朵', '头', '尾', '升', 'ml', 'L'];
 
-// 将语音原文按「数字+单位 → 新食材名」模式切成多段
-// 例："牛肉500克鸡蛋3个西兰花1颗" → ["牛肉500克", "鸡蛋3个", "西兰花1颗"]
+// 中文数字 → 阿拉伯数字（支持：零一二三四五六七八九十百千，以及"两"）
+function chineseNumToArabic(str) {
+  const map = { '零':0,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'两':2 };
+  const magnitudes = { '十':10,'百':100,'千':1000 };
+  // 如果是纯阿拉伯数字直接返回
+  if (/^[\d.]+$/.test(str)) return str;
+  let result = 0, cur = 0;
+  for (const ch of str) {
+    if (ch in map) {
+      cur = map[ch];
+    } else if (ch in magnitudes) {
+      if (cur === 0) cur = 1; // 处理"十"开头的情况
+      result += cur * magnitudes[ch];
+      cur = 0;
+    }
+  }
+  result += cur;
+  return result > 0 ? String(result) : str;
+}
+
+// 将语音原文按「数字/中文数字 + 单位 → 新食材名」模式切成多段
+// 例："鸡蛋两个牛肉500克" → ["鸡蛋两个", "牛肉500克"]
+// 例："牛肉 500 克鸡蛋 3 个" → ["牛肉 500 克", "鸡蛋 3 个"]
 function splitVoiceInput(raw) {
   const unitPattern = UNITS.map(u => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  // 在「数字+单位」之后、紧跟非数字非空格字符（新食材名开头）时插入分隔符
-  const re = new RegExp(`(\\d+(?:\\.\\d+)?(?:${unitPattern}))(?=[^\\d\\s;；])`, 'g');
+  const numPat = `(?:[\\d.]+|[零一二三四五六七八九十百千两]+)`;
+  // 在「数字/中文数字 + 可选空格 + 单位」之后、紧跟非数字非空格字符时插入分隔符
+  const re = new RegExp(`(${numPat}\\s*(?:${unitPattern}))(?=[^\\d\\s;；零一二三四五六七八九十百千两])`, 'g');
   return raw.replace(re, '$1;').split(/[;；]+/).map(s => s.trim()).filter(Boolean);
 }
 
-// 解析单条 "牛肉 500g" → { name, amount, unit }
+// 解析单条 "牛肉 500g" 或 "鸡蛋两个" → { name, amount, unit }
 function parseOneItem(raw) {
   const unitPattern = UNITS.map(u => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  const re = new RegExp(`^([^\\d\\s]+)\\s*([\\d.]+)\\s*(${unitPattern})?\\s*$`);
+  const numPat = `([\\d.]+|[零一二三四五六七八九十百千两]+)`;
+  // 匹配：食材名 + 数字/中文数字 + 可选空格 + 可选单位
+  const re = new RegExp(`^([^\\d零一二三四五六七八九十百千两]+?)\\s*${numPat}\\s*(${unitPattern})?\\s*$`);
   const m = raw.trim().match(re);
-  if (m) return { name: m[1].trim(), amount: m[2], unit: (m[3] || '').trim() };
+  if (m) {
+    return {
+      name: m[1].trim(),
+      amount: chineseNumToArabic(m[2]),
+      unit: (m[3] || '').trim()
+    };
+  }
   return { name: raw.trim(), amount: '', unit: '' };
 }
 
@@ -913,7 +943,7 @@ async function exportPoster() {
     dlBtn.onclick = () => {
       const a = document.createElement('a');
       a.href     = dataUrl;
-      a.download = `冰箱_${new Date().toISOString().slice(0,10)}.png`;
+      a.download = `冰箱_${new Date().toISOString().slice(0,10)}.webp`;
       a.click();
     };
 
